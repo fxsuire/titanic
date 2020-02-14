@@ -47,9 +47,9 @@ public class Main {
 		File tmpDir = new File("data/input.csv");
 		boolean exists = tmpDir.exists();
 		System.out.println(exists);
-				
-//		Table t = Table.read()
-//				.file("data/input.csv");
+		
+		Table t = Table.read()
+				.file("data/input.csv");
 		
 //		CsvReadOptions.Builder builder = CsvReadOptions.builder("data/input.csv")
 //					.separator('\t')										// table is tab-delimited
