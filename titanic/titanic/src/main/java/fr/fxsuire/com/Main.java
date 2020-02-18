@@ -41,15 +41,17 @@ import java.util.TreeSet;
 
 public class Main {
 	
-	public static void main(String[] args) {
-		
-		
-		File tmpDir = new File("data/input.csv");
-		boolean exists = tmpDir.exists();
-		System.out.println(exists);
-		
-		Table t = Table.read()
-				.file("data/input.csv");
+	public static void main(String[] args) throws Exception {
+		   
+		   
+		   File tmpDir = new File("data/input.csv");
+		   boolean exists = tmpDir.exists();
+		   System.out.println(exists);
+		   
+		   Table t = Table.read()
+		         .file("data/input.csv");
+		   if (t == null) System.out.println("raté");
+		   else System.out.println("youpi");
 		
 //		CsvReadOptions.Builder builder = CsvReadOptions.builder("data/input.csv")
 //					.separator('\t')										// table is tab-delimited
