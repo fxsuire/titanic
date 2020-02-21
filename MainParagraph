@@ -1,0 +1,90 @@
+%spark
+
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.functions.expr
+
+//import org.apache.spark.sql.types.{StructType, StructField, StringType, IntegerType};
+
+// import org.apache.commons.io.IOUtils
+// import java.net.URL
+// import java.nio.charset.Charset
+// import org.apache.spark.ml.classification.DecisionTreeClassificationModel;
+// import org.apache.spark.ml.classification.DecisionTreeClassifier;
+// import org.apache.spark.ml.feature.StringIndexer;
+// import org.apache.spark.ml.feature.StringIndexerModel;
+// import org.apache.spark.ml.feature.VectorAssembler;
+// import org.apache.spark.mllib.evaluation.MulticlassMetrics;
+// import org.apache.spark.sql.SparkSession;
+// import org.apache.spark.sql.Row;
+// import org.apache.spark.sql.functions;
+// import org.apache.spark.sql.types.DataTypes;
+// import org.apache.spark.sql.types.StructType;
+
+// création du dataframe Spark
+val df = spark.read.options(Map("inferSchema"->"true","delimiter"->",","header"->"true"))
+  .csv("/Users/FXSUIRE/Google Drive/_00_Dev/Titanic/input.csv")
+
+// application du schéma de données
+// colonnes d'origine
+case class passenger_cls(Survived:Int,Pclass:Int,Name:String,Sex:String,Age:Float,Siblings:Int,ParentAboard:Int,Fare:Float)
+
+case class passenger_addedcol(Survived:Int,Pclass:Int,Name:String,Sex:String,Age:Float,Siblings:Int,ParentAboard:Int,Fare:Float,FareUpdated:Float)
+
+//Ratio d'actualisation du prix du ticket en liver sterling 2020
+// source: https://www.thisismoney.co.uk/money/bills/article-1633409/Historic-inflation-calculator-value-money-changed-1900.html
+val UpdatingRatio = 115.8
+
+// FareActualised = "Fare*UpdatingRatio"
+val df2 = df.withColumn("FareUpdated", df("Fare") * UpdatingRatio)
+
+// x0: Surived:Int
+// x1: Pclass:Int
+// x2: Name:String
+// x3: Sex:String
+// x4: Age:Float
+// x5: Siblings:Int
+// x6: ParentAboard:Int
+// x7: Fare:Float
+
+// x8: Actualised (2020) Fare: float
+
+// mapping des colonnes originales
+val passenger = data1.map(x=>x.split(",")).map(x => passenger_cls(x(0).toInt,x(1).toInt,x(2),x(3),x(4).toFloat,x(5).toInt,x(6).toInt,x(7).toFloat)).toDF
+
+//enregistrement dans une table temporaire des données des passagers
+passenger.registerTempTable("PASSENGER")
+
+//sélection des données que l'on souhaite utiliser dans nos requêtes de visualisations
+
+// Décès-survie du passager, classe, sex, prix du ticket
+val SurvivalAgeClassSexFare = sqlContext.sql("select Survived, Pclass, Sex, Fare from PASSENGER")
+SurvivalAgeClassSexFare.registerTempTable("SMALLPASSTABLE")
+
+// Statistiques basiques sur le prix des tickets
+val BasicStats = sqlContext.sql("select min(fare), max(fare), avg(fare), stddev(fare) from PASSENGER where fare>0").toDF
+
+val BasicStatsRenamed = BasicStats.withColumnRenamed("min(fare)","Minimum fare price")
+           .withColumnRenamed("max(fare)","Maximum fare price")
+           .withColumnRenamed("avg(fare)","Average fare price")
+           .withColumnRenamed("stddev(fare)","Standard deviation")
+
+BasicStatsRenamed.registerTempTable("BASICFARETABLE")
+
+// Décès-survie du passager, classe, sex, prix du ticket 2020
+
+//enregistrement dans une table temporaire des données des passagers avec ajout des colonnes Fareupdated
+df2.registerTempTable("PASSPROCDATA")
+
+val SurvivalAgeClassSexFare2020 = sqlContext.sql("select Survived, Pclass, Sex, Fare, FareUpdated from PASSPROCDATA")
+SurvivalAgeClassSexFare2020.registerTempTable("SMALLPASSTABLE2020")
+
+// statistiques sur le prix du ticket actualisé, c'est à dire en GBP de 2020
+
+val BasicUpdFareStats = sqlContext.sql("select min(FareUpdated), max(FareUpdated), avg(FareUpdated), stddev(FareUpdated) from SMALLPASSTABLE2020 where fare>0").toDF
+
+val BasicUpdStatsRenamed = BasicUpdFareStats.withColumnRenamed("min(FareUpdated)","Minimum fare price")
+           .withColumnRenamed("max(FareUpdated)","Maximum fare price")
+           .withColumnRenamed("avg(FareUpdated)","Average fare price")
+           .withColumnRenamed("stddev(FareUpdated)","Standard deviation")
+
+BasicUpdStatsRenamed.registerTempTable("BASICUPDFARETABLE")
